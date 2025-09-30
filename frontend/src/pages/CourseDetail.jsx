@@ -14,14 +14,15 @@ const CourseDetail = () => {
     const fetchCourses = async () => {
       try {
 
-        const res = await fetch(`http://localhost:8000/courses/${id}`);
+        const res = await fetch(`https://univ-course-aggregator.onrender.com/courses/${id}`);
         if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         const data = await res.json();
 
-        // The courses array is under data.courses
+        // The course object is under data.course
         setCourse(data.course || {});
       } catch (err) {
         // setError(err.message || "Failed to load courses.");
+        console.err(err)
       } finally {
       }
     };

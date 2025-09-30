@@ -42,3 +42,6 @@ def get_course(course_id: int):
     if not course:
         raise HTTPException(status_code=404, detail="Course not found")
     return CourseResponse(course=course)
+
+from fastapi.staticfiles import StaticFiles
+app.mount("/", StaticFiles(directory="../frontend/dist", html=True), name="static")

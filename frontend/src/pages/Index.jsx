@@ -30,7 +30,7 @@ const Index = () => {
         setLoading(true);
         setError(null);
 
-        const res = await fetch("https://univ-course-aggregator.onrender.com/courses");
+        const res = await fetch("http://localhost:8001/api/courses");
         if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         const data = await res.json();
 

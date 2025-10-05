@@ -28,6 +28,8 @@ class Course(Base):
     mode = Column(String, nullable=True)
     location = Column(String, nullable=True)
     fees = Column(String, nullable=True)
+    fees_detail = Column(Text, nullable=True)
+    requirements = Column(Text, nullable=True)
     link = Column(String, nullable=True, unique=True)
     summary = Column(Text, nullable=True)
     department_id = Column(Integer, ForeignKey("departments.id"))

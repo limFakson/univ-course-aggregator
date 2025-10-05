@@ -14,12 +14,13 @@ const CourseDetail = () => {
     const fetchCourses = async () => {
       try {
 
-        const res = await fetch(`https://univ-course-aggregator.onrender.com/courses/${id}`);
+        const res = await fetch(`http://localhost:8001/api/courses/${id}`);
         if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         const data = await res.json();
 
         // The course object is under data.course
-        setCourse(data.course || {});
+        setCourse(data || {});
+        console.log(course)
       } catch (err) {
         // setError(err.message || "Failed to load courses.");
         console.err(err)
@@ -63,7 +64,7 @@ const CourseDetail = () => {
         <Card className="p-8 border border-[#d4d2d2]">
           <header className="mb-8">
             <h1 className="text-3xl font-bold text-foreground mb-2">{course.title}</h1>
-            <p className="text-lg text-muted-foreground">{course.university}</p>
+            <p className="text-lg text-muted-foreground">{course.department.name}</p>
           </header>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
@@ -87,7 +88,7 @@ const CourseDetail = () => {
             <div className="space-y-4">
               <div>
                 <h3 className="font-semibold text-foreground mb-1">Schedule</h3>
-                <p className="text-muted-foreground">{course.schedule}</p>
+                <p className="text-muted-foreground">{course.mode}</p>
               </div>
               
               <div>
@@ -95,17 +96,17 @@ const CourseDetail = () => {
                 <p className="text-muted-foreground">{course.instructor}</p>
               </div>
               
-              <div>
-                <h3 className="font-semibold text-foreground mb-1">Credits</h3>
-                <p className="text-muted-foreground">{course.credits}</p>
-              </div>
             </div>
           </div>
 
           <div className="space-y-6">
             <div>
+              <h3 className="font-semibold text-foreground mb-1">Fees Details</h3>
+              <p className="text-muted-foreground">{course.fees_detail}</p>
+            </div>
+            <div>
               <h3 className="font-semibold text-foreground mb-3">Course Description</h3>
-              <p className="text-muted-foreground leading-relaxed">{course.description}</p>
+              <p className="text-muted-foreground leading-relaxed">{course.summary}</p>
             </div>
 
             <div>

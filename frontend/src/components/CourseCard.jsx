@@ -11,8 +11,8 @@ export const CourseCard = ({ course, onClick }) => {
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
           <div>
-            <span className="font-medium">University:</span>
-            <p className="text-muted-foreground">{course.university}</p>
+            <span className="font-medium">Department:</span>
+            <p className="text-muted-foreground">{course.department.name}</p>
           </div>
           
           <div>

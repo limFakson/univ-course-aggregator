@@ -11,14 +11,14 @@ from urllib.parse import urljoin
 import re
 from datetime import datetime
 
-BASE_DEPT_PAGE = "https://www.southampton.ac.uk/about/faculties-schools-departments/school-of-geography-and-environmental-science"
+BASE_DEPT_PAGE = "https://www.southampton.ac.uk/about/faculties-schools-departments"
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (compatible; CourseAggregator/1.0; +https://example.com)"
 }
 
-def extract_course_links_from_dept():
-    resp = requests.get(BASE_DEPT_PAGE, headers=HEADERS, timeout=15)
+def extract_course_links_from_dept(slug:str) ->list:
+    resp = requests.get(f"{BASE_DEPT_PAGE}/{slug}", headers=HEADERS, timeout=15)
     resp.raise_for_status()
     soup = BeautifulSoup(resp.text, "html.parser")
     links = set()
@@ -34,7 +34,7 @@ def extract_course_links_from_dept():
     # Also look for specific 'Our courses' section links (if any) — some might be relative
     return list(links)
 
-def scrape_course_page(url):
+def scrape_course_page(url:str)->dict:
     try:
         resp = requests.get(url, headers=HEADERS, timeout=15)
         resp.raise_for_status()
@@ -70,38 +70,78 @@ def scrape_course_page(url):
     elif re.search(r"part[-\s]*time", text, re.I):
         mode = "Part-time"
 
-    # Fees: look for '£' or '£' + numbers or 'Fees' label
-    fees = None
-    m = re.search(r"(£\s?[\d,]+(?:\.\d+)?(?:\s?per year|\s?total)?)", text)
-    if m:
-        fees = m.group(1)
-    else:
-        # alternative: look for 'Fees' label
-        fee_label = soup.find(string=re.compile(r"Fees", re.I))
-        if fee_label:
-            parent = fee_label.parent
-            next_text = parent.find_next(string=True)
-            if next_text:
-                fees = next_text.strip()
+    # --- Fees Section Parsing
+    fees_section = None
+    fees_detail = None
+    fees_summary = None
+    uk_fee = None
+    intl_fee = None
+
+    tuition_section = soup.find(string=re.compile(r"Tuition fees", re.I))
+    if tuition_section:
+        # Grab nearby text
+        section_text = ""
+        for elem in tuition_section.parent.find_all_next(["p", "li"], limit=10):
+            section_text += elem.get_text(" ", strip=True) + "\n"
+        fees_section = section_text.strip()
+
+        # Extract specific fees
+        uk_match = re.search(r"UK students pay\s*(£[0-9,\.]+)", fees_section, re.I)
+        intl_match = re.search(r"(EU and international students|International students)\s*pay\s*(£[0-9,\.]+)", fees_section, re.I)
+
+        if uk_match:
+            uk_fee = uk_match.group(1)
+        if intl_match:
+            intl_fee = intl_match.group(2)
+
+        # Build a readable summary
+        if uk_fee and intl_fee:
+            fees_summary = f"UK: {uk_fee} | International: {intl_fee}"
+        elif uk_fee:
+            fees_summary = f"UK: {uk_fee}"
+        elif intl_fee:
+            fees_summary = f"International: {intl_fee}"
+
+        fees_detail = fees_section
+
+    # fallback if tuition section not found
+    if not fees_summary:
+        generic_fee = re.search(r"(£\s?\d[\d,\.]*)", text)
+        if generic_fee:
+            fees_summary = generic_fee.group(1)
+
+    # --- Entry Requirements Section
+    requirements = None
+    req_anchor = soup.find(string=re.compile(r"Entry requirements", re.I))
+    if req_anchor:
+        req_text = ""
+        for elem in req_anchor.parent.find_all_next(["p", "li"], limit=10):
+            t = elem.get_text(" ", strip=True)
+            if re.search(r"Fees|How to apply|Tuition", t, re.I):
+                break
+            req_text += t + "\n"
+        requirements = req_text.strip()
 
     return {
         "title": title,
         "summary": summary,
         "duration": duration,
         "mode": mode,
-        "fees": fees,
+        "fees": fees_summary,
+        "fees_detail": fees_detail,
+        "requirements": requirements,
         "link": url,
         "location": "Southampton, UK"
     }
 
-def refresh_biological_sciences(dept_name:str, slug:str=None, uni_name:str="University of Southampton"):
+def refresh_biological_sciences(dept_name:str, dept_slug:str=None, uni_name:str=None)->dict:
     db = SessionLocal()
     try:
-        slug = slugify(dept_name) if slug is None else slug
+        slug = slugify(dept_name)
         uni = get_or_create_university(db, name=uni_name, country="UK", website="https://www.southampton.ac.uk")
-        dept = get_or_create_department(db, name=dept_name, university_id=uni.id, slug=slug)
+        dept = get_or_create_department(db, name=dept_name, university_id=uni.id, slug=dept_slug)
 
-        links = extract_course_links_from_dept()
+        links = extract_course_links_from_dept(slug)
         print(f"Found {len(links)} candidate links to scan.")
 
         created = 0
@@ -123,9 +163,7 @@ def refresh_biological_sciences(dept_name:str, slug:str=None, uni_name:str="Univ
             else:
                 updated += 1
 
+        print({"created": created, "updated": updated})
         return {"created": created, "updated": updated}
     finally:
         db.close()
-
-if __name__ == "__main__":
-    print(refresh_biological_sciences())

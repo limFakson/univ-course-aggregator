@@ -74,13 +74,13 @@ def api_get_course(course_id: int, db: Session = Depends(get_db)):
     return c
 
 @app.post("/api/refresh/biological-sciences")
-def refresh_biological_sciences_endpoint(background_tasks: BackgroundTasks, uni:str=None, dept:str=None, slug:str=None):
+def refresh_biological_sciences_endpoint(background_tasks: BackgroundTasks, dept:str, slug:str, uni:str="University of Southampton"):
     """
     Trigger a refresh/scrape for the School of Biological Sciences.
     Returns quickly and runs the scraping in background.
     """
     # Run in background to avoid blocking long scraping
-    background_tasks.add_task(refresh_biological_sciences(dept, slug, uni))
+    background_tasks.add_task(refresh_biological_sciences, dept, slug, uni)
     return {"status": "started", "message": "Refresh started in background. Check API after a moment."}
 
 # Serve frontend static (assumes built frontend copied to backend/static)

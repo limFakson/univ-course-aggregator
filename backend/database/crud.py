@@ -42,6 +42,8 @@ def upsert_course(db: Session, department_id: int, course_data: dict):
         existing.mode = course_data.get("mode") or existing.mode
         existing.location = course_data.get("location") or existing.location
         existing.fees = course_data.get("fees") or existing.fees
+        existing.fees_detail = course_data.get("fees_detail") or existing.fees_detail
+        existing.requirements = course_data.get("requirements") or existing.requirements
         existing.summary = course_data.get("summary") or existing.summary
         existing.last_updated = datetime.utcnow()
         db.add(existing)
@@ -55,6 +57,8 @@ def upsert_course(db: Session, department_id: int, course_data: dict):
             mode=course_data.get("mode"),
             location=course_data.get("location"),
             fees=course_data.get("fees"),
+            fees_detail=course_data.get("fees_detail"),
+            requirements=course_data.get("requirements"),
             link=course_data.get("link"),
             summary=course_data.get("summary"),
             department_id=department_id,

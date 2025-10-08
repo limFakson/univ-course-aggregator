@@ -7,7 +7,7 @@ from database.database import SessionLocal, engine
 from database import models
 from database.crud import get_or_create_university, get_or_create_department, get_course, get_courses
 from scraper import refresh_biological_sciences
-from database.schemas import UniversityOut, DepartmentOut, CourseOut, CourseListOut
+from database.schemas import UniversityOut, DepartmentOut, CourseOut, CourseListOut, CourseCreate
 from typing import Optional
 
 # Create DB tables
@@ -52,8 +52,6 @@ def api_get_courses(
     department_id: Optional[int] = Query(None),
     location: Optional[str] = Query(None),
     duration: Optional[str] = Query(None),
-    skip: int = 0,
-    limit: int = 10,
     db: Session = Depends(get_db),
 ):
     filters = {
@@ -63,8 +61,54 @@ def api_get_courses(
         "location": location,
         "duration": duration,
     }
-    total, items = get_courses(db, skip=skip, limit=limit, **{k:v for k,v in filters.items() if v})
-    return {"total": total, "skip": skip, "limit": limit, "courses": items}
+    total, items = get_courses(db, **{k:v for k,v in filters.items() if v})
+    return {"total": total, "courses": items}
+
+@app.post("/api/courses", response_model=dict)
+def create_course(course: CourseCreate, db: Session = Depends(get_db)):
+    """Create a new course record"""
+    try:
+        # Check if department exists
+        department = db.query(models.Department).filter(models.Department.id == course.department_id).first()
+        if not department:
+            raise HTTPException(status_code=404, detail="Department not found")
+
+        # Duplicate protection
+        existing = db.query(models.Course).filter(
+            models.Course.title.ilike(course.title),
+            models.Course.department_id == course.department_id
+        ).first()
+
+        if existing:
+            raise HTTPException(status_code=400, detail="Course already exists in this department.")
+
+        # Create new course
+        new_course = models.Course(
+            title=course.title,
+            duration=course.duration,
+            mode=course.mode,
+            location=course.location,
+            fees=course.fees,
+            fees_detail=course.fees_detail,
+            requirements=course.requirements,
+            link=course.link,
+            department_id=course.department_id,
+        )
+        db.add(new_course)
+        db.commit()
+        db.refresh(new_course)
+
+        return {
+            "status": "success",
+            "message": f"Course '{course.title}' created successfully.",
+            "course": CourseOut.from_orm(new_course),
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 @app.get("/api/courses/{course_id}", response_model=CourseOut)
 def api_get_course(course_id: int, db: Session = Depends(get_db)):

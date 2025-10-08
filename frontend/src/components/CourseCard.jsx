@@ -1,12 +1,16 @@
 import { Card } from '@/components/ui/card';
 
-export const CourseCard = ({ course, onClick }) => {
+export const CourseCard = ({ course, onClick, onSelect, selected }) => {
   return (
     <Card 
-      className="p-6 border  hover:bg-muted transition-colors cursor-pointer"
-      onClick={onClick}
+      className="p-6 border  hover:bg-muted transition-colors cursor-pointer"      
     >
-      <div className="space-y-3">
+      <input
+        type="checkbox"
+        checked={selected}
+        onChange={() => onSelect(course)}
+      />
+      <div className="space-y-3" onClick={onClick}>
         <h3 className="text-xl font-semibold text-foreground">{course.title}</h3>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">

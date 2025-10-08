@@ -12,15 +12,18 @@ export const SearchAndFilter = ({
   selectedLocation,
   onLocationChange,
   universities,
+  departments,
+  onDepartmentChange,
+  selectedDepartment,
   locations,
   onClearFilters
 }) => {
-  const hasActiveFilters = searchTerm || selectedUniversity || selectedLocation;
+  const hasActiveFilters = searchTerm || selectedUniversity || selectedDepartment || selectedLocation;
 
   return (
     <div className="bg-zinc-100 p-6 border rounded-lg mb-8">
       <div className="max-w-6xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
           {/* Search Input */}
           <div className="md:col-span-2">
             <label htmlFor="search" className="block text-sm font-medium text-foreground mb-2">
@@ -51,8 +54,28 @@ export const SearchAndFilter = ({
               <SelectContent>
                 <SelectItem value="all">All Universities</SelectItem>
                 {universities.map((university) => (
-                  <SelectItem key={university} value={university}>
-                    {university}
+                  <SelectItem key={university.id} value={university.name}>
+                    {university.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Department Filter */}
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">
+              Department
+            </label>
+            <Select value={selectedDepartment} onValueChange={onDepartmentChange}>
+              <SelectTrigger className="bg-white">
+                <SelectValue placeholder="All Department" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Department</SelectItem>
+                {departments.map((department) => (
+                  <SelectItem key={department.id} value={department.name}>
+                    {department.name}
                   </SelectItem>
                 ))}
               </SelectContent>

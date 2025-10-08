@@ -69,7 +69,7 @@ def upsert_course(db: Session, department_id: int, course_data: dict):
         return new, True
 
 # Query helpers for endpoints
-def get_courses(db: Session, skip: int = 0, limit: int = 10, **filters):
+def get_courses(db: Session, **filters):
     query = db.query(Course)
     if filters.get("title"):
         query = query.filter(Course.title.ilike(f"%{filters['title']}%"))
@@ -82,7 +82,7 @@ def get_courses(db: Session, skip: int = 0, limit: int = 10, **filters):
     if filters.get("duration"):
         query = query.filter(Course.duration.ilike(f"%{filters['duration']}%"))
     total = query.count()
-    items = query.offset(skip).limit(limit).all()
+    items = query.all()
     return total, items
 
 def get_course(db: Session, id: int):

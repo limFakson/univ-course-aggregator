@@ -4,11 +4,13 @@ import { useNavigate } from "react-router-dom";
 import { CourseCard } from "../components/CourseCard";
 import { SearchAndFilter } from "../components/SearchAndFilter";
 import { Pagination } from "../components/Pagination";
+import ComparePanel from "../components/ComparePanel";
 import {
   filterCourses,
   paginateCourses,
   getUniqueValues,
 } from "../utils/courseUtils";
+import { getCourses, getDepartments, getUniversities } from "../services/api";
 
 const ITEMS_PER_PAGE = 9;
 
@@ -16,28 +18,54 @@ const Index = () => {
   const navigate = useNavigate();
   
   const [courses, setCourses] = useState([]);
+  const [dept, setDept] = useState([]);
+  const [uni, setUni] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   const [searchTerm, setSearchTerm] = useState("");
+  const [selected, setSelected] = useState([]); 
   const [selectedUniversity, setSelectedUniversity] = useState("");
+  const [selectedDepartment, setSelectedDeprtment] = useState("");
   const [selectedLocation, setSelectedLocation] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    const cachedCourses = JSON.parse(localStorage.getItem("courses"));
+    if (cachedCourses?.length) setCourses(cachedCourses);
+  }, []);
 
   useEffect(() => {
     const fetchCourses = async () => {
       try {
         setLoading(true);
         setError(null);
+        const [courseRes, deptRes, uniRes] = await Promise.all([
+          getCourses(),
+          getDepartments(),
+          getUniversities(),
+        ]);
 
-        const res = await fetch("http://localhost:8001/api/courses");
-        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-        const data = await res.json();
+        setCourses(courseRes.data.courses || []);
+        setDept(deptRes.data || []);
+        setUni(uniRes.data || []);
 
-        // The courses array is under data.courses
-        setCourses(data.courses || []);
+        // ✅ Store raw courses in localStorage
+        localStorage.setItem("courses", JSON.stringify(courseList));
+
+        // ✅ Extract unique universities, departments, and locations
+        const uniList = getUniqueValues(uni_data.data, "name");
+        const deptList = getUniqueValues(dept_data.data, "name");
+        const locList = getUniqueValues(courseRes.data.courses , "location");
+
+        // ✅ Store for dashboard & filters
+        localStorage.setItem("universities", JSON.stringify(uniList));
+        localStorage.setItem("departments", JSON.stringify(deptList));
+        localStorage.setItem("locations", JSON.stringify(locList));
       } catch (err) {
-        setError(err.message || "Failed to load courses.");
+        if(courses == null){
+          setError(err.message || "Failed to load courses.");
+        }
       } finally {
         setLoading(false);
       }
@@ -46,10 +74,44 @@ const Index = () => {
     fetchCourses();
   }, []);
 
+  useEffect(() => {
+    const fetchFilteredCourses = async () => {
+      try {
+        setLoading(true);
+        const params = {};
+
+        if (selectedUniversity) {
+          const uniObj = uni.find((u) => u.name === selectedUniversity);
+          if (uniObj) params.university_id = uniObj.id;
+        }
+
+        if (selectedDepartment) {
+          const deptObj = dept.find((d) => d.name === selectedDepartment);
+          if (deptObj) params.department_id = deptObj.id;
+        }
+
+        const res = await getCourses(params);
+        setCourses(res.data.courses || []);
+        setCurrentPage(1);
+      } catch (err) {
+        setError(err.message || "Failed to filter courses.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFilteredCourses();
+  }, [selectedUniversity, selectedDepartment]);
+
   // Get unique values for filters
   const universities = useMemo(
-    () => getUniqueValues(courses, "university"),
-    [courses]
+    () => uni,
+    [uni]
+  );
+
+  const departments = useMemo(
+    () => dept,
+    [dept]
   );
   const locations = useMemo(() => getUniqueValues(courses, "location"), [courses]);
 
@@ -58,7 +120,6 @@ const Index = () => {
     return filterCourses(
       courses,
       searchTerm,
-      selectedUniversity,
       selectedLocation
     );
   }, [courses, searchTerm, selectedUniversity, selectedLocation]);
@@ -82,6 +143,11 @@ const Index = () => {
     setCurrentPage(1);
   };
 
+    const handleDepartmentChange = (value) => {
+    setSelectedDeprtment(value === "all" ? "" : value);
+    setCurrentPage(1);
+  };
+
   const handleLocationChange = (value) => {
     setSelectedLocation(value === "all" ? "" : value);
     setCurrentPage(1);
@@ -90,6 +156,7 @@ const Index = () => {
   const handleClearFilters = () => {
     setSearchTerm("");
     setSelectedUniversity("");
+    setSelectedDeprtment("");
     setSelectedLocation("");
     setCurrentPage(1);
   };
@@ -101,6 +168,14 @@ const Index = () => {
   const handlePageChange = (page) => {
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: "smooth" });
+  }; 
+
+  const toggleSelect = (course) => {
+    if (selected.find((c) => c.id === course.id)) {
+      setSelected(selected.filter((c) => c.id !== course.id));
+    } else {
+      setSelected([...selected, course]);
+    }
   };
 
   return (
@@ -133,6 +208,9 @@ const Index = () => {
               selectedLocation={selectedLocation}
               onLocationChange={handleLocationChange}
               universities={universities}
+              departments={departments}
+              selectedDepartment={selectedDepartment}
+              onDepartmentChange={handleDepartmentChange}
               locations={locations}
               onClearFilters={handleClearFilters}
             />
@@ -156,6 +234,8 @@ const Index = () => {
                     key={course.id}
                     course={course}
                     onClick={() => handleCourseClick(course.id)}
+                    onSelect={toggleSelect}
+                    selected={!!selected.find((c) => c.id === course.id)}
                   />
                 ))}
               </div>
@@ -180,6 +260,7 @@ const Index = () => {
             />
           </>
         )}
+        <ComparePanel selected={selected} onClose={() => setSelected([])} />
       </div>
     </div>
   );

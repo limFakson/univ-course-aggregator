@@ -2,22 +2,17 @@
 export const filterCourses = (
   courses,
   searchTerm,
-  selectedUniversity,
   selectedLocation
 ) => {
   return courses.filter((course) => {
     const matchesSearch = !searchTerm || 
       course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      course.university.toLowerCase().includes(searchTerm.toLowerCase()) ||
       course.description.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesUniversity = !selectedUniversity || 
-      course.university === selectedUniversity;
 
     const matchesLocation = !selectedLocation || 
       course.location === selectedLocation;
 
-    return matchesSearch && matchesUniversity && matchesLocation;
+    return matchesSearch && matchesLocation;
   });
 };
 
@@ -32,6 +27,10 @@ export const paginateCourses = (
 };
 
 export const getUniqueValues = (courses, field) => {
-  const values = courses.map(course => course[field]);
-  return Array.from(new Set(values)).sort();
+  const getValue = (obj, path) => {
+    return path.split('.').reduce((acc, key) => acc?.[key], obj);
+  };
+
+  const values = courses.map(course => getValue(course, field));
+  return Array.from(new Set(values.filter(Boolean))).sort();
 };

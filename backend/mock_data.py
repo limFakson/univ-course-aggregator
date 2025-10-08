@@ -1,4 +1,4 @@
-from model.base_model import Course
+from database.models import Course
 
 # -----------------------------
 # Mock Data

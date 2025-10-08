@@ -32,7 +32,7 @@ class CourseBase(BaseModel):
     duration: Optional[str] = None
     mode: Optional[str] = None
     location: Optional[str] = None
-    fees: Optional[str] = None
+    fees: Optional[str] = "Not specified"
     link: Optional[str] = None
     summary: Optional[str] = None
     fees_detail: Optional[str] = None       
@@ -52,8 +52,20 @@ class CourseOut(CourseBase):
     class Config:
         from_attributes = True
 
+class CourseCreate(BaseModel):
+    title: str
+    duration: Optional[str] = None
+    mode: Optional[str] = None
+    location: Optional[str] = None
+    fees: Optional[str] = None
+    fees_detail: Optional[str] = None
+    requirements: Optional[str] = None
+    link: Optional[str] = None
+    department_id: int
+
+    class Config:
+        from_attributes = True
+        
 class CourseListOut(BaseModel):
     total: int
-    skip: int
-    limit: int
     courses: List[CourseOut]

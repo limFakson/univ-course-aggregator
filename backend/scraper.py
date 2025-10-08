@@ -147,14 +147,14 @@ def refresh_biological_sciences(dept_name:str, dept_slug:str=None, uni_name:str=
         created = 0
         updated = 0
         for link in links:
-            # Some links might be listing pages — we try to detect actual course pages by presence of MSc/MRes in title/text
+            
             data = scrape_course_page(link)
             if not data:
                 continue
 
             title = data.get("title") or ""
             if not re.search(r"(MSc|MRes|Master|Postgraduate|Taught)", title, re.I) and not re.search(r"(MSc|MRes|masters|postgraduate)", link, re.I):
-                # Skip links that don't look like course pages
+                
                 continue
 
             course, is_new = upsert_course(db, department_id=dept.id, course_data=data)
@@ -167,3 +167,5 @@ def refresh_biological_sciences(dept_name:str, dept_slug:str=None, uni_name:str=
         return {"created": created, "updated": updated}
     finally:
         db.close()
+        
+refresh_biological_sciences('School of Engineering', 'engineering-school', 'University of Southampton')

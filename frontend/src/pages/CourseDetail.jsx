@@ -3,6 +3,7 @@ import { sampleCourses } from '@/data/courses';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ArrowLeft } from 'lucide-react';
+import { getCourse } from '../services/api';
 import { useEffect, useState } from 'react';
 
 const CourseDetail = () => {
@@ -13,13 +14,10 @@ const CourseDetail = () => {
   useEffect(() => {
     const fetchCourses = async () => {
       try {
-
-        const res = await fetch(`http://localhost:8001/api/courses/${id}`);
-        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-        const data = await res.json();
+        const data = await getCourse(id);
 
         // The course object is under data.course
-        setCourse(data || {});
+        setCourse(data.data || {});
         console.log(course)
       } catch (err) {
         // setError(err.message || "Failed to load courses.");

@@ -51,7 +51,7 @@ const Index = () => {
         setUni(uniRes.data || []);
 
         // ✅ Store raw courses in localStorage
-        localStorage.setItem("courses", JSON.stringify(courseList));
+        localStorage.setItem("courses", JSON.stringify(courseRes.data.courses ));
 
         // ✅ Extract unique universities, departments, and locations
         const uniList = getUniqueValues(uni_data.data, "name");

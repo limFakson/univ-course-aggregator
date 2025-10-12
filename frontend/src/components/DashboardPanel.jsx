@@ -7,32 +7,31 @@ const DashboardSummary = () => {
     departments: 0,
   });
 
-  const updateSummaryFromCache = () => {
-    try {
-      const cachedCourses = JSON.parse(localStorage.getItem("courses")) || [];
-      const cachedUniversities = JSON.parse(localStorage.getItem("universities")) || [];
-      const cachedDepartments = JSON.parse(localStorage.getItem("departments")) || [];
-
-      setSummary({
-        courses: Array.isArray(cachedCourses)
-          ? cachedCourses.length
-          : cachedCourses.total || 0,
-        universities: cachedUniversities.length,
-        departments: cachedDepartments.length,
-      });
-    } catch (err) {
-      console.warn("DashboardSummary: failed to read cache", err);
-    }
-  };
-
   useEffect(() => {
-    // Initial read
+    const updateSummaryFromCache = () => {
+      try {
+        const cachedCourses = JSON.parse(localStorage.getItem("courses")) || [];
+        const cachedUniversities = JSON.parse(localStorage.getItem("universities")) || [];
+        const cachedDepartments = JSON.parse(localStorage.getItem("departments")) || [];
+
+        setSummary({
+          courses: Array.isArray(cachedCourses)
+            ? cachedCourses.length
+            : cachedCourses.total || 0,
+          universities: cachedUniversities.length,
+          departments: cachedDepartments.length,
+        });
+      } catch (err) {
+        console.warn("DashboardSummary: failed to read cache", err);
+      }
+    };
+
+    // Run once on mount
     updateSummaryFromCache();
 
-    // Recheck every 2 seconds in case cache updates later
-    const interval = setInterval(updateSummaryFromCache, 2000);
-
-    return () => clearInterval(interval);
+    // Listen for storage updates
+    window.addEventListener("storage-update", updateSummaryFromCache);
+    return () => window.removeEventListener("storage-update", updateSummaryFromCache);
   }, []);
 
   return (

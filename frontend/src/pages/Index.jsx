@@ -16,7 +16,7 @@ const ITEMS_PER_PAGE = 9;
 
 const Index = () => {
   const navigate = useNavigate();
-  
+
   const [courses, setCourses] = useState([]);
   const [dept, setDept] = useState([]);
   const [uni, setUni] = useState([]);
@@ -24,7 +24,7 @@ const Index = () => {
   const [error, setError] = useState(null);
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [selected, setSelected] = useState([]); 
+  const [selected, setSelected] = useState([]);
   const [selectedUniversity, setSelectedUniversity] = useState("");
   const [selectedDepartment, setSelectedDeprtment] = useState("");
   const [selectedLocation, setSelectedLocation] = useState("");
@@ -50,22 +50,22 @@ const Index = () => {
         setDept(deptRes.data || []);
         setUni(uniRes.data || []);
 
-        // ✅ Store raw courses in localStorage
-        localStorage.setItem("courses", JSON.stringify(courseRes.data.courses ));
-
         // ✅ Extract unique universities, departments, and locations
-        const uniList = getUniqueValues(uni_data.data, "name");
-        const deptList = getUniqueValues(dept_data.data, "name");
-        const locList = getUniqueValues(courseRes.data.courses , "location");
+        const uniList = getUniqueValues(uniRes.data, "name");
+        const deptList = getUniqueValues(deptRes.data, "name");
+        const locList = getUniqueValues(courseRes.data.courses, "location");
 
-        // ✅ Store for dashboard & filters
+        // ✅ Store raw courses in localStorage
+        localStorage.setItem("courses", JSON.stringify(courseRes.data.courses));
         localStorage.setItem("universities", JSON.stringify(uniList));
         localStorage.setItem("departments", JSON.stringify(deptList));
         localStorage.setItem("locations", JSON.stringify(locList));
+
+        window.dispatchEvent(new Event("storage-update"));
       } catch (err) {
-        if(courses == null){
-          setError(err.message || "Failed to load courses.");
+        if (courses == null) {
         }
+        setError(err.message || "Failed to load courses.");
       } finally {
         setLoading(false);
       }
@@ -104,24 +104,17 @@ const Index = () => {
   }, [selectedUniversity, selectedDepartment]);
 
   // Get unique values for filters
-  const universities = useMemo(
-    () => uni,
-    [uni]
-  );
+  const universities = useMemo(() => uni, [uni]);
 
-  const departments = useMemo(
-    () => dept,
-    [dept]
+  const departments = useMemo(() => dept, [dept]);
+  const locations = useMemo(
+    () => getUniqueValues(courses, "location"),
+    [courses]
   );
-  const locations = useMemo(() => getUniqueValues(courses, "location"), [courses]);
 
   // Filter courses based on search and filters
   const filteredCourses = useMemo(() => {
-    return filterCourses(
-      courses,
-      searchTerm,
-      selectedLocation
-    );
+    return filterCourses(courses, searchTerm, selectedLocation);
   }, [courses, searchTerm, selectedUniversity, selectedLocation]);
 
   // Paginate the filtered courses
@@ -143,7 +136,7 @@ const Index = () => {
     setCurrentPage(1);
   };
 
-    const handleDepartmentChange = (value) => {
+  const handleDepartmentChange = (value) => {
     setSelectedDeprtment(value === "all" ? "" : value);
     setCurrentPage(1);
   };
@@ -168,7 +161,7 @@ const Index = () => {
   const handlePageChange = (page) => {
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: "smooth" });
-  }; 
+  };
 
   const toggleSelect = (course) => {
     if (selected.find((c) => c.id === course.id)) {

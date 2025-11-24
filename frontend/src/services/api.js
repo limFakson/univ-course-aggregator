@@ -1,8 +1,8 @@
-import axios from "axios";
+  import axios from "axios";
 
-const api = axios.create({
-  baseURL: "/api",
-});
+  const api = axios.create({
+    baseURL: "/api",
+  });
 
 export const getCourses = (params = {}) => api.get("/courses", { params });
 export const getCourse = (id) => api.get(`/courses/${id}`);

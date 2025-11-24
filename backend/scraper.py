@@ -163,7 +163,6 @@ def refresh_biological_sciences(dept_name:str, dept_slug:str=None, uni_name:str=
             else:
                 updated += 1
 
-        print({"created": created, "updated": updated})
         return {"created": created, "updated": updated}
     finally:
         db.close()

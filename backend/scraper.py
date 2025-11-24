@@ -1,11 +1,16 @@
 # scraper.py
 import os, sys
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../")))
 
 import requests
 from slugify import slugify
 from bs4 import BeautifulSoup
-from backend.database.crud import get_or_create_university, get_or_create_department, upsert_course
+from backend.database.crud import (
+    get_or_create_university,
+    get_or_create_department,
+    upsert_course,
+)
 from backend.database.database import SessionLocal
 from urllib.parse import urljoin
 import re
@@ -17,7 +22,8 @@ HEADERS = {
     "User-Agent": "Mozilla/5.0 (compatible; CourseAggregator/1.0; +https://example.com)"
 }
 
-def extract_course_links_from_dept(slug:str) ->list:
+
+def extract_course_links_from_dept(slug: str) -> list:
     resp = requests.get(f"{BASE_DEPT_PAGE}/{slug}", headers=HEADERS, timeout=15)
     resp.raise_for_status()
     soup = BeautifulSoup(resp.text, "html.parser")
@@ -34,7 +40,8 @@ def extract_course_links_from_dept(slug:str) ->list:
     # Also look for specific 'Our courses' section links (if any) — some might be relative
     return list(links)
 
-def scrape_course_page(url:str)->dict:
+
+def scrape_course_page(url: str) -> dict:
     try:
         resp = requests.get(url, headers=HEADERS, timeout=15)
         resp.raise_for_status()
@@ -87,7 +94,11 @@ def scrape_course_page(url:str)->dict:
 
         # Extract specific fees
         uk_match = re.search(r"UK students pay\s*(£[0-9,\.]+)", fees_section, re.I)
-        intl_match = re.search(r"(EU and international students|International students)\s*pay\s*(£[0-9,\.]+)", fees_section, re.I)
+        intl_match = re.search(
+            r"(EU and international students|International students)\s*pay\s*(£[0-9,\.]+)",
+            fees_section,
+            re.I,
+        )
 
         if uk_match:
             uk_fee = uk_match.group(1)
@@ -131,15 +142,22 @@ def scrape_course_page(url:str)->dict:
         "fees_detail": fees_detail,
         "requirements": requirements,
         "link": url,
-        "location": "Southampton, UK"
+        "location": "Southampton, UK",
     }
 
-def refresh_biological_sciences(dept_name:str, dept_slug:str=None, uni_name:str=None)->dict:
+
+def refresh_biological_sciences(
+    dept_name: str, dept_slug: str = None, uni_name: str = None
+) -> dict:
     db = SessionLocal()
     try:
         slug = slugify(dept_name)
-        uni = get_or_create_university(db, name=uni_name, country="UK", website="https://www.southampton.ac.uk")
-        dept = get_or_create_department(db, name=dept_name, university_id=uni.id, slug=dept_slug)
+        uni = get_or_create_university(
+            db, name=uni_name, country="UK", website="https://www.southampton.ac.uk"
+        )
+        dept = get_or_create_department(
+            db, name=dept_name, university_id=uni.id, slug=dept_slug
+        )
 
         links = extract_course_links_from_dept(slug)
         print(f"Found {len(links)} candidate links to scan.")
@@ -147,14 +165,16 @@ def refresh_biological_sciences(dept_name:str, dept_slug:str=None, uni_name:str=
         created = 0
         updated = 0
         for link in links:
-            
+
             data = scrape_course_page(link)
             if not data:
                 continue
 
             title = data.get("title") or ""
-            if not re.search(r"(MSc|MRes|Master|Postgraduate|Taught)", title, re.I) and not re.search(r"(MSc|MRes|masters|postgraduate)", link, re.I):
-                
+            if not re.search(
+                r"(MSc|MRes|Master|Postgraduate|Taught)", title, re.I
+            ) and not re.search(r"(MSc|MRes|masters|postgraduate)", link, re.I):
+
                 continue
 
             course, is_new = upsert_course(db, department_id=dept.id, course_data=data)
@@ -166,5 +186,8 @@ def refresh_biological_sciences(dept_name:str, dept_slug:str=None, uni_name:str=
         return {"created": created, "updated": updated}
     finally:
         db.close()
-        
-refresh_biological_sciences('School of Engineering', 'engineering-school', 'University of Southampton')
+
+
+refresh_biological_sciences(
+    "School of Engineering", "engineering-school", "University of Southampton"
+)

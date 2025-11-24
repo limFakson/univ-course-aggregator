@@ -3,15 +3,24 @@ from fastapi import FastAPI, Depends, HTTPException, Query, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
-from database.database import SessionLocal, engine
+from database.database import SessionLocal, engine, Base
 from database import models
-from database.crud import get_or_create_university, get_or_create_department, get_course, get_courses
-from scraper import refresh_biological_sciences
-from database.schemas import UniversityOut, DepartmentOut, CourseOut, CourseListOut, CourseCreate
+from database.crud import (
+    get_or_create_university,
+    get_or_create_department,
+    get_course,
+    get_courses,
+)
+from database.schemas import (
+    UniversityOut,
+    DepartmentOut,
+    CourseOut,
+    CourseListOut,
+    CourseCreate,
+)
 from typing import Optional
 
 # Create DB tables
-models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="University Course Aggregator - Backend")
 
@@ -25,6 +34,14 @@ app.add_middleware(
 )
 
 
+@app.on_event("startup")
+def on_startup():
+    print("Creating database tables...")
+    Base.metadata.drop_all(bind=engine)  # optional: wipe old tables
+    Base.metadata.create_all(bind=engine)
+    print("✅ Database initialized")
+
+
 # Dependency
 def get_db():
     db = SessionLocal()
@@ -33,17 +50,22 @@ def get_db():
     finally:
         db.close()
 
+
 @app.get("/api/universities", response_model=list[UniversityOut])
 def list_universities(db: Session = Depends(get_db)):
     items = db.query(models.University).all()
     return items
 
+
 @app.get("/api/departments", response_model=list[DepartmentOut])
-def list_departments(university_id: Optional[int] = None, db: Session = Depends(get_db)):
+def list_departments(
+    university_id: Optional[int] = None, db: Session = Depends(get_db)
+):
     q = db.query(models.Department)
     if university_id:
         q = q.filter(models.Department.university_id == university_id)
     return q.all()
+
 
 @app.get("/api/courses", response_model=CourseListOut)
 def api_get_courses(
@@ -61,26 +83,37 @@ def api_get_courses(
         "location": location,
         "duration": duration,
     }
-    total, items = get_courses(db, **{k:v for k,v in filters.items() if v})
+    total, items = get_courses(db, **{k: v for k, v in filters.items() if v})
     return {"total": total, "courses": items}
+
 
 @app.post("/api/courses", response_model=dict)
 def create_course(course: CourseCreate, db: Session = Depends(get_db)):
     """Create a new course record"""
     try:
         # Check if department exists
-        department = db.query(models.Department).filter(models.Department.id == course.department_id).first()
+        department = (
+            db.query(models.Department)
+            .filter(models.Department.id == course.department_id)
+            .first()
+        )
         if not department:
             raise HTTPException(status_code=404, detail="Department not found")
 
         # Duplicate protection
-        existing = db.query(models.Course).filter(
-            models.Course.title.ilike(course.title),
-            models.Course.department_id == course.department_id
-        ).first()
+        existing = (
+            db.query(models.Course)
+            .filter(
+                models.Course.title.ilike(course.title),
+                models.Course.department_id == course.department_id,
+            )
+            .first()
+        )
 
         if existing:
-            raise HTTPException(status_code=400, detail="Course already exists in this department.")
+            raise HTTPException(
+                status_code=400, detail="Course already exists in this department."
+            )
 
         # Create new course
         new_course = models.Course(
@@ -110,6 +143,7 @@ def create_course(course: CourseCreate, db: Session = Depends(get_db)):
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
+
 @app.get("/api/courses/{course_id}", response_model=CourseOut)
 def api_get_course(course_id: int, db: Session = Depends(get_db)):
     c = get_course(db, course_id)
@@ -117,15 +151,27 @@ def api_get_course(course_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Course not found")
     return c
 
+
 @app.post("/api/refresh/biological-sciences")
-def refresh_biological_sciences_endpoint(background_tasks: BackgroundTasks, dept:str, slug:str, uni:str="University of Southampton"):
+def refresh_biological_sciences_endpoint(
+    background_tasks: BackgroundTasks,
+    dept: str,
+    slug: str,
+    uni: str = "University of Southampton",
+):
     """
     Trigger a refresh/scrape for the School of Biological Sciences.
     Returns quickly and runs the scraping in background.
     """
+    from scraper import refresh_biological_sciences
+
     # Run in background to avoid blocking long scraping
     background_tasks.add_task(refresh_biological_sciences, dept, slug, uni)
-    return {"status": "started", "message": "Refresh started in background. Check API after a moment."}
+    return {
+        "status": "started",
+        "message": "Refresh started in background. Check API after a moment.",
+    }
+
 
 # Serve frontend static (assumes built frontend copied to backend/static)
 app.mount("/", StaticFiles(directory="../frontend/dist", html=True), name="static")

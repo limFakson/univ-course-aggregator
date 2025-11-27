@@ -7,10 +7,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-DATABASE_URL = os.getenv("DATABASE_UR") or "sqlite:///./unicamp_db.sqlite3"
+DATABASE_URL = os.getenv("DATABASE_URL")
+# or "sqlite:///./unicamp_db.sqlite3"
 
 engine = create_engine(
-    DATABASE_URL, connect_args={"check_same_thread": False}, echo=False
+    DATABASE_URL,
+    # connect_args={"check_same_thread": False},
+    echo=False,
+    pool_pre_ping=True,
 )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

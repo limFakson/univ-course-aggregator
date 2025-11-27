@@ -37,7 +37,6 @@ app.add_middleware(
 @app.on_event("startup")
 def on_startup():
     print("Creating database tables...")
-    Base.metadata.drop_all(bind=engine)  # optional: wipe old tables
     Base.metadata.create_all(bind=engine)
     print("✅ Database initialized")
 

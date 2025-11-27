@@ -186,8 +186,3 @@ def refresh_biological_sciences(
         return {"created": created, "updated": updated}
     finally:
         db.close()
-
-
-refresh_biological_sciences(
-    "School of Engineering", "engineering-school", "University of Southampton"
-)
